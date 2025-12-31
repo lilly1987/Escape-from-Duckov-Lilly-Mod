@@ -1,0 +1,5 @@
+name = BigStorage3
+displayName = 大仓库（动态扩容）
+description = 仓库容量根据物品量动态扩容（至少会比物品量多20）
+
+publishedFileId = 3596779409
