@@ -56,6 +56,10 @@
       <HintPath>..\..\..\Managed\TeamSoda.Duckov.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="TeamSoda.Duckov.Utilities">
+      <HintPath>..\..\..\Managed\TeamSoda.Duckov.Utilities.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\Managed\UnityEngine.CoreModule.dll</HintPath>
       <Private>False</Private>

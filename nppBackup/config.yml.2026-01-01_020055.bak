@@ -1,0 +1,4 @@
+DefaultCapacity: 1024
+InventoryCapacity: 8
+MaxStackCount: 2000000000
+WeightMultiplier: 0

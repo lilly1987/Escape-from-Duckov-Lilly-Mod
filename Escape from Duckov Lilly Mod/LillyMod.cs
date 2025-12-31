@@ -1,5 +1,7 @@
-﻿using Duckov.Modding;
+﻿using Duckov.ItemBuilders;
+using Duckov.Modding;
 using HarmonyLib;
+using ItemStatsSystem;
 using ItemStatsSystem.Stats;
 using System;
 using System.Collections.Generic;
@@ -75,6 +77,9 @@ namespace Escape_from_Duckov_Lilly_Mod
         {
             public int DefaultCapacity { get; set; } = 512;
             public float InventoryCapacity { get; set; } = 4f;
+            public int MaxStackCount { get; set; } = 0;
+            public float MaxDurability { get; set; } = 2000000000;
+            public float WeightMultiplier { get; set; } = 0f;
 
             public override string ToString()
             {
@@ -149,6 +154,68 @@ namespace Escape_from_Duckov_Lilly_Mod
                 }
             }
         }
+
+        [HarmonyPatch(typeof(ItemBuilder))]              // 패치할 클래스 지정
+        [HarmonyPatch("Instantiate")]             // 대상 메서드 이름
+        public class ItemBuilder_Instantiate_Patch
+        {
+            // 메서드 실행 전에 로그 찍기
+            static void Prefix()
+            {
+                Debug.Log("[Harmony] ItemBuilder.Instantiate() 호출됨 (Prefix)");
+            }
+        }
+
+        [HarmonyPatch(typeof(Item))] // 실제 클래스 이름으로 교체하세요
+        public static class Item_Patch
+        {
+            [HarmonyPatch("MaxStackCount", MethodType.Getter)]
+            [HarmonyPostfix]
+            static void Stackable_Postfix(ref int __result, Item __instance)
+            {
+                // 항상 큰 값으로 덮어쓰기 (예: int.MaxValue)
+                //__result = int.MaxValue;
+                if (__instance.GetBool("IsBullet",false)|| __instance.Tags.Contains("Cash"))
+                    __result = config.MaxStackCount;
+            }
+
+            // UnitSelfWeight getter 패치
+            [HarmonyPatch("UnitSelfWeight", MethodType.Getter)]
+            [HarmonyPostfix]
+            static void UnitSelfWeight_Postfix(ref float __result)
+            {
+                __result *= config.WeightMultiplier;
+            }
+
+            // SelfWeight getter 패치
+            [HarmonyPatch("SelfWeight", MethodType.Getter)]
+            [HarmonyPostfix]
+            static void SelfWeight_Postfix(ref float __result)
+            {
+                __result *= config.WeightMultiplier;
+            }
+
+            [HarmonyPatch("MaxDurability", MethodType.Setter)]
+            [HarmonyPrefix]
+            static bool MaxDurability_Prefix(Item __instance, ref float __result)
+            {
+                // setter에 전달된 value 인수를 강제로 MaxDurability로 바꿈
+                __result = config.MaxDurability;
+                return false; // 원래 메서드 실행 안함
+            }
+
+            [HarmonyPatch("Durability", MethodType.Setter)]
+            [HarmonyPrefix]
+            static void Durability_Prefix(Item __instance, ref float value)
+            {
+                // setter에 전달된 value 인수를 강제로 MaxDurability로 바꿈
+                value = __instance.MaxDurability;
+            }
+
+
+
+        }
+
 
     }
 }
