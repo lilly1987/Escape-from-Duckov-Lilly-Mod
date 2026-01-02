@@ -242,7 +242,10 @@ namespace Escape_from_Duckov_Lilly_Mod
 
         private static readonly HashSet<string> Debuff = new HashSet<string>
         {
-            "Buff_BleedS", // Food
+            "Buff_Burn", // 
+            "Buff_Electric", // 
+            "Buff_BleedS", // 
+            "Buff_Pain", // 
         };
 
         [HarmonyPatch(typeof(Buff))] // 실제 대상 클래스가 Setup을 가진 클래스명으로 교체 필요
