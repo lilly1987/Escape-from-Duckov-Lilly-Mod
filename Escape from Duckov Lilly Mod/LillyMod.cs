@@ -1,5 +1,7 @@
-﻿using Duckov.ItemBuilders;
+﻿using Duckov.Buffs;
+using Duckov.ItemBuilders;
 using Duckov.Modding;
+using ECM2.Examples.SlopeSpeedModifier;
 using HarmonyLib;
 using ItemStatsSystem;
 using ItemStatsSystem.Stats;
@@ -9,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using UnityEngine;
 using YamlDotNet.Serialization;
@@ -75,19 +78,25 @@ namespace Escape_from_Duckov_Lilly_Mod
 
         public class Config
         {
-            public int DefaultCapacity { get; set; } = 512;
-            public float InventoryCapacity { get; set; } = 4f;
-            public int MaxStackCount { get; set; } = 0;
-            public float MaxDurability { get; set; } = 2000000000;
+            public int PlayerStorageDefaultCapacity { get; set; } = 1024;
+            public int PetCapcity { get; set; } = 8;
+            public float InventoryCapacity { get; set; } = 8f;
             public float WeightMultiplier { get; set; } = 0f;
+            public int MaxStackCount { get; set; } = 2000000000;
+            public float MaxDurability { get; set; } = 2000000000f;
+            public float MaxWeight { get; set; } = 2000000000f;
+            public float MaxWater { get; set; } = 2000000000f;
+            public float MaxStamina { get; set; } = 2000000000f;
+            public float MaxEnergy { get; set; } = 2000000000f;
+            public float MaxHealth { get; set; } = 2000000000f;
+            public float CharacterRunSpeed { get; set; } = 8f;
+            public float CharacterWalkSpeed { get; set; } = 2f;
+            public float Buff_totalLifeTime { get; set; } = 1f;
 
             public override string ToString()
             {
                 return string.Join(", ",
-                    $"{nameof(DefaultCapacity)}={DefaultCapacity}",
-                    $"{nameof(InventoryCapacity)}={InventoryCapacity}"
-                    );
-
+                    GetType().GetProperties().Select(p => $"{p.Name}={p.GetValue(this)}"));
             }
         }
 
@@ -122,18 +131,147 @@ namespace Escape_from_Duckov_Lilly_Mod
             Console.WriteLine($"config: {config.ToString()}");
         }
 
+        /// <summary>
+        /// 팻 가방
+        /// </summary>
+        [HarmonyPatch(typeof(CharacterMainControl))] // 실제 클래스 이름으로 교체하세요
+        public static class CharacterMainControl_Patch
+        {
 
+            [HarmonyPatch("PetCapcity", MethodType.Getter)]
+            [HarmonyPostfix]
+            public static void PetCapcity_Postfix(ref int __result)
+            {
+                // 항상 0으로 덮어쓰기
+                __result = config.PetCapcity;
+            }
+
+            [HarmonyPatch("CharacterRunSpeed", MethodType.Getter)]
+            [HarmonyPostfix]
+            public static void CharacterRunSpeed(ref float __result, CharacterMainControl __instance)
+            {
+                if (__instance.IsMainCharacter)
+                    // 원래 반환값(__result)을 두 배로 변경
+                    __result *= config.CharacterRunSpeed;
+            }
+
+            [HarmonyPatch("CharacterWalkSpeed", MethodType.Getter)]
+            [HarmonyPostfix]
+            public static void CharacterWalkSpeed(ref float __result, CharacterMainControl __instance)
+            {
+                if (__instance.IsMainCharacter)
+                    // 원래 반환값(__result)을 두 배로 변경
+                    __result *= config.CharacterWalkSpeed;
+            }
+
+            [HarmonyPatch("MaxEnergy", MethodType.Getter)]
+            [HarmonyPostfix]
+            public static bool MaxEnergy(ref float __result, CharacterMainControl __instance)
+            {
+                if (__instance.IsMainCharacter)
+                {
+                    __result = config.MaxEnergy;
+                    return false; // 원래 메서드 실행 안함
+                }
+                return true;
+            }
+
+            [HarmonyPatch("MaxStamina", MethodType.Getter)]
+            [HarmonyPostfix]
+            public static bool MaxStamina(ref float __result, CharacterMainControl __instance)
+            {
+                if (__instance.IsMainCharacter)
+                {
+                    __result = config.MaxStamina;
+                    return false; // 원래 메서드 실행 안함
+                }
+                return true;
+            }
+
+            [HarmonyPatch("MaxWater", MethodType.Getter)]
+            [HarmonyPostfix]
+            public static bool MaxWater(ref float __result, CharacterMainControl __instance)
+            {
+                if (__instance.IsMainCharacter)
+                {
+                    __result = config.MaxWater;
+                    return false; // 원래 메서드 실행 안함
+                }
+                return true;
+            }
+
+            [HarmonyPatch("MaxWeight", MethodType.Getter)]
+            [HarmonyPostfix]
+            public static bool MaxWeight(ref float __result, CharacterMainControl __instance)
+            {
+                if (__instance.IsMainCharacter)
+                {
+                    __result = config.MaxWeight;
+                    return false; // 원래 메서드 실행 안함
+                }
+                return true;
+            }
+
+            // AddBuff 메서드 패치
+            [HarmonyPatch("AddBuff")]
+            [HarmonyPrefix] // 실행 전에 개입
+            public static void Prefix(Buff buffPrefab, CharacterMainControl fromWho, int overrideWeaponID, CharacterMainControl __instance)
+            {
+                // 예: 특정 Buff을 막거나 로그 출력
+                if (__instance.IsMainCharacter)
+                {
+                    //return false; // 원래 메서드 실행을 막음
+                }
+                //return true; // true면 원래 메서드 계속 실행
+            }
+
+        }
+
+        [HarmonyPatch(typeof(Buff))] // 실제 대상 클래스가 Setup을 가진 클래스명으로 교체 필요
+        public static class Buff_Patch
+        {
+            // Setup 메서드 실행 전에 개입
+            [HarmonyPatch("Setup")]
+            [HarmonyPrefix]
+            public static void Setup_Prefix(CharacterBuffManager manager, Buff __instance, ref float ___totalLifeTime)
+            {
+                //Debug.Log($"[Harmony] Setup called on {__instance} with manager={manager}");
+                // 여기서 manager를 조작하거나 조건부로 원래 메서드 실행을 막을 수 있음
+                // return false; → 원래 메서드 실행 차단
+                if (__instance.Character.IsMainCharacter)
+                {
+                    ___totalLifeTime *= config.Buff_totalLifeTime;
+                }
+            }
+
+            // Setup 메서드 실행 후 개입
+            //[HarmonyPatch("Setup")]
+            //[HarmonyPostfix]
+            //public static void Postfix(CharacterBuffManager manager, object __instance)
+            //{
+            //    Debug.Log($"[Harmony] Setup finished on {__instance} with manager={manager}");
+            //    // 후처리 로직 추가 가능
+            //}
+        }
+
+
+        /// <summary>
+        /// 창고
+        /// </summary>
         [HarmonyPatch(typeof(PlayerStorage))]
         [HarmonyPatch("DefaultCapacity", MethodType.Getter)]
         public class PlayerStorage_DefaultCapacity_Patch
         {
-            static void Postfix(ref int __result)
+            public static void Postfix(ref int __result)
             {
                 // 원래 getter가 반환한 값(__result)에 1024를 더해줌
-                __result += config.DefaultCapacity;
+                __result += config.PlayerStorageDefaultCapacity;
             }
         }
 
+        /// <summary>
+        /// 플레이어?
+        /// </summary>
         [HarmonyPatch(typeof(ItemStatsSystem.ModifierDescription))]
         [HarmonyPatch("CreateModifier")]
         public class ModifierDescription_CreateModifier_Patch
@@ -166,6 +304,29 @@ namespace Escape_from_Duckov_Lilly_Mod
             }
         }
 
+        private static readonly HashSet<string> SpecialNamesNot = new HashSet<string>
+        {
+            "Item_CocoMilk", // Food
+        };
+
+        private static readonly HashSet<string> SpecialNames = new HashSet<string>
+        {
+            "Item_Dynamite",
+            "Item_FlamingCore",
+            "Item_ColdCore",
+            "Item_Chocalate", // Food
+            "Item_EnergyStick", // Food
+            "Item_Honey", // Food
+            "Item_Yogurt", // Food
+            "Item_Feather"
+        };
+
+        private static readonly List<Regex> SpecialNamePatterns = new List<Regex>
+        {
+            new Regex(@"^Item_Injection_.*$", RegexOptions.Compiled)
+        };
+
+
         [HarmonyPatch(typeof(Item))] // 실제 클래스 이름으로 교체하세요
         public static class Item_Patch
         {
@@ -175,7 +336,17 @@ namespace Escape_from_Duckov_Lilly_Mod
             {
                 // 항상 큰 값으로 덮어쓰기 (예: int.MaxValue)
                 //__result = int.MaxValue;
-                if (__instance.GetBool("IsBullet",false)|| __instance.Tags.Contains("Cash"))
+                if (
+                    //! __instance.Tags.Contains("Equipment") &&
+                    //! SpecialNamesNot.Contains(__instance.DisplayNameRaw) && 
+                    //(__instance.GetBool("IsBullet",false)
+                    //|| __instance.Tags.Contains("Cash")
+                    //|| __instance.Tags.Contains("Food")
+                    //|| SpecialNames.Contains(__instance.DisplayNameRaw)
+                    //|| SpecialNamePatterns.Any(r => r.IsMatch(__instance.DisplayNameRaw))
+                    //)
+                    __instance.GetVariableEntry("Count")!=null
+                    )
                     __result = config.MaxStackCount;
             }
 
@@ -197,7 +368,16 @@ namespace Escape_from_Duckov_Lilly_Mod
 
             [HarmonyPatch("MaxDurability", MethodType.Setter)]
             [HarmonyPrefix]
-            static bool MaxDurability_Prefix(Item __instance, ref float __result)
+            static void MaxDurability_Setter(Item __instance, ref float value)
+            {
+                // setter에 전달된 value 인수를 강제로 MaxDurability로 바꿈
+                value = config.MaxDurability;
+                //return false; // 원래 메서드 실행 안함
+            }
+
+            [HarmonyPatch("MaxDurability", MethodType.Getter)]
+            [HarmonyPrefix]
+            static bool MaxDurability_Getter(Item __instance, ref float __result)
             {
                 // setter에 전달된 value 인수를 강제로 MaxDurability로 바꿈
                 __result = config.MaxDurability;
@@ -206,14 +386,59 @@ namespace Escape_from_Duckov_Lilly_Mod
 
             [HarmonyPatch("Durability", MethodType.Setter)]
             [HarmonyPrefix]
-            static void Durability_Prefix(Item __instance, ref float value)
+            static void Durability_Setter(Item __instance, ref float value)
             {
                 // setter에 전달된 value 인수를 강제로 MaxDurability로 바꿈
                 value = __instance.MaxDurability;
             }
 
+            [HarmonyPatch("Durability", MethodType.Getter)]
+            [HarmonyPrefix]
+            static bool Durability_Getter(Item __instance, ref float __result)
+            {
+                // setter에 전달된 value 인수를 강제로 MaxDurability로 바꿈
+                __result = __instance.MaxDurability;
+                return false; // 원래 메서드 실행 안함
+            }
+        }
 
+        [HarmonyPatch(typeof(Health))]
+        public static class HealthPatch
+        {
+            // MaxHealth의 getter를 패치
+            [HarmonyPatch("MaxHealth", MethodType.Getter)]
+            [HarmonyPrefix] // getter 실행 후 결과를 수정하거나 확인
+            public static bool MaxHealth(ref float __result, Health __instance)
+            {
+                if (__instance.IsMainCharacterHealth)
+                {
+                    __result = config.MaxHealth;
+                    return false; // 원래 메서드 실행 안함
+                }
+                return true; // 원래 메서드 실행
+            }
 
+            // MaxHealth의 getter를 패치
+            [HarmonyPatch("CurrentHealth", MethodType.Getter)]
+            [HarmonyPrefix] // getter 실행 후 결과를 수정하거나 확인
+            public static bool CurrentHealth(ref float __result, Health __instance)
+            {
+                if (__instance.IsMainCharacterHealth)
+                {
+                    __result = config.MaxHealth;
+                    return false; // 원래 메서드 실행 안함
+                }
+                return true; // 원래 메서드 실행
+            }
+
+            [HarmonyPatch("CurrentHealth", MethodType.Setter)]
+            [HarmonyPrefix]
+            public static void CurrentHealth_Setter(Health __instance, ref float value)
+            {
+                // setter에 전달된 value 인수를 강제로 MaxDurability로 바꿈
+                if (__instance.IsMainCharacterHealth)
+                    value = __instance.MaxHealth;
+            }
         }
 
 
