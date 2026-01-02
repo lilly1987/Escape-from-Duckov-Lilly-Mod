@@ -1,6 +1,6 @@
 PlayerStorageDefaultCapacity: 1024 # 창고 PlayerStorage.Instance
-PetCapcity: 8 # 8 초과시 초과분 안보임. PetProxy.Instance.Inventory
-InventoryCapacity: 8 # 가방 배율
+PetCapcity: 9 # 9 초과시 초과분 안보임. PetProxy.Instance.Inventory
+InventoryCapacity: 250 # 가방 
 WeightMultiplier: 0 # 무게 배율
 MaxStackCount: 2000000000 # 중첩 , IsBullet, Cash, Item_FlamingCore, Item_ColdCore, Item_Feather 깃털
 MaxDurability: 2000000000 # 내구

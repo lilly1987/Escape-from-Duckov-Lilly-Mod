@@ -80,18 +80,19 @@ namespace Escape_from_Duckov_Lilly_Mod
         {
             public int PlayerStorageDefaultCapacity { get; set; } = 1024;
             public int PetCapcity { get; set; } = 8;
-            public float InventoryCapacity { get; set; } = 8f;
+            public float InventoryCapacity { get; set; } = 250f;
             public float WeightMultiplier { get; set; } = 0f;
             public int MaxStackCount { get; set; } = 2000000000;
             public float MaxDurability { get; set; } = 2000000000f;
             public float MaxWeight { get; set; } = 2000000000f;
-            public float MaxWater { get; set; } = 2000000000f;
-            public float MaxStamina { get; set; } = 2000000000f;
-            public float MaxEnergy { get; set; } = 2000000000f;
+            public float MaxWater { get; set; } = 500000000f;
+            public float MaxStamina { get; set; } = 500000000f;
+            public float MaxEnergy { get; set; } = 500000000f;
             public float MaxHealth { get; set; } = 2000000000f;
             public float CharacterRunSpeed { get; set; } = 8f;
             public float CharacterWalkSpeed { get; set; } = 2f;
-            public float Buff_totalLifeTime { get; set; } = 1f;
+            public float Buff_totalLifeTime { get; set; } = 64f;
+            public float Debuff_totalLifeTime { get; set; } = 64f;
 
             public override string ToString()
             {
@@ -165,7 +166,7 @@ namespace Escape_from_Duckov_Lilly_Mod
             }
 
             [HarmonyPatch("MaxEnergy", MethodType.Getter)]
-            [HarmonyPostfix]
+            [HarmonyPrefix]
             public static bool MaxEnergy(ref float __result, CharacterMainControl __instance)
             {
                 if (__instance.IsMainCharacter)
@@ -177,7 +178,7 @@ namespace Escape_from_Duckov_Lilly_Mod
             }
 
             [HarmonyPatch("MaxStamina", MethodType.Getter)]
-            [HarmonyPostfix]
+            [HarmonyPrefix]
             public static bool MaxStamina(ref float __result, CharacterMainControl __instance)
             {
                 if (__instance.IsMainCharacter)
@@ -189,7 +190,7 @@ namespace Escape_from_Duckov_Lilly_Mod
             }
 
             [HarmonyPatch("MaxWater", MethodType.Getter)]
-            [HarmonyPostfix]
+            [HarmonyPrefix]
             public static bool MaxWater(ref float __result, CharacterMainControl __instance)
             {
                 if (__instance.IsMainCharacter)
@@ -201,12 +202,24 @@ namespace Escape_from_Duckov_Lilly_Mod
             }
 
             [HarmonyPatch("MaxWeight", MethodType.Getter)]
-            [HarmonyPostfix]
+            [HarmonyPrefix]
             public static bool MaxWeight(ref float __result, CharacterMainControl __instance)
             {
                 if (__instance.IsMainCharacter)
                 {
                     __result = config.MaxWeight;
+                    return false; // 원래 메서드 실행 안함
+                }
+                return true;
+            }
+
+            [HarmonyPatch("InventoryCapacity", MethodType.Getter)]
+            [HarmonyPrefix]
+            public static bool InventoryCapacity(ref float __result, CharacterMainControl __instance)
+            {
+                if (__instance.IsMainCharacter)
+                {
+                    __result = config.InventoryCapacity;
                     return false; // 원래 메서드 실행 안함
                 }
                 return true;
@@ -227,6 +240,11 @@ namespace Escape_from_Duckov_Lilly_Mod
 
         }
 
+        private static readonly HashSet<string> Debuff = new HashSet<string>
+        {
+            "Buff_BleedS", // Food
+        };
+
         [HarmonyPatch(typeof(Buff))] // 실제 대상 클래스가 Setup을 가진 클래스명으로 교체 필요
         public static class Buff_Patch
         {
@@ -238,9 +256,12 @@ namespace Escape_from_Duckov_Lilly_Mod
                 //Debug.Log($"[Harmony] Setup called on {__instance} with manager={manager}");
                 // 여기서 manager를 조작하거나 조건부로 원래 메서드 실행을 막을 수 있음
                 // return false; → 원래 메서드 실행 차단
-                if (__instance.Character.IsMainCharacter)
+                if (manager.Master.IsMainCharacter)
                 {
-                    ___totalLifeTime *= config.Buff_totalLifeTime;
+                    if (__instance.DisplayNameKey.Contains("Debuff")|| Debuff.Contains(__instance.DisplayNameKey))
+                        ___totalLifeTime /= config.Debuff_totalLifeTime;
+                    else
+                        ___totalLifeTime *= config.Buff_totalLifeTime;
                 }
             }
 
@@ -272,26 +293,26 @@ namespace Escape_from_Duckov_Lilly_Mod
         /// <summary>
         /// 플레이어?
         /// </summary>
-        [HarmonyPatch(typeof(ItemStatsSystem.ModifierDescription))]
-        [HarmonyPatch("CreateModifier")]
-        public class ModifierDescription_CreateModifier_Patch
-        {
-            static void Postfix(object source, ref Modifier __result, ItemStatsSystem.ModifierDescription __instance)
-            {
-                // key가 "InventoryCapacity"일 경우 결과를 새 Modifier로 교체
-                if (__instance.Key == "InventoryCapacity")
-                {
-                    //__result = new Modifier(
-                    //    __instance.Type,
-                    //    __instance.Value * 8f,
-                    //    __instance.IsOverrideOrder,
-                    //    __instance.Order,
-                    //    source
-                    //);
-                    __result.Value *= config.InventoryCapacity;
-                }
-            }
-        }
+        //[HarmonyPatch(typeof(ItemStatsSystem.ModifierDescription))]
+        //[HarmonyPatch("CreateModifier")]
+        //public class ModifierDescription_CreateModifier_Patch
+        //{
+        //    static void Postfix(object source, ref Modifier __result, ItemStatsSystem.ModifierDescription __instance)
+        //    {
+        //        // key가 "InventoryCapacity"일 경우 결과를 새 Modifier로 교체
+        //        if (__instance.Key == "InventoryCapacity")
+        //        {
+        //            //__result = new Modifier(
+        //            //    __instance.Type,
+        //            //    __instance.Value * 8f,
+        //            //    __instance.IsOverrideOrder,
+        //            //    __instance.Order,
+        //            //    source
+        //            //);
+        //            __result.Value *= config.InventoryCapacity;
+        //        }
+        //    }
+        //}
 
         [HarmonyPatch(typeof(ItemBuilder))]              // 패치할 클래스 지정
         [HarmonyPatch("Instantiate")]             // 대상 메서드 이름
@@ -303,6 +324,7 @@ namespace Escape_from_Duckov_Lilly_Mod
                 Debug.Log("[Harmony] ItemBuilder.Instantiate() 호출됨 (Prefix)");
             }
         }
+
 
         private static readonly HashSet<string> SpecialNamesNot = new HashSet<string>
         {
