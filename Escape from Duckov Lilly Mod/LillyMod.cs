@@ -93,6 +93,7 @@ namespace Escape_from_Duckov_Lilly_Mod
             public float CharacterWalkSpeed { get; set; } = 2f;
             public float Buff_totalLifeTime { get; set; } = 64f;
             public float Debuff_totalLifeTime { get; set; } = 64f;
+            public float GunShootSpeedMultiplier { get; set; } = 16f;
 
             public override string ToString()
             {
@@ -145,6 +146,15 @@ namespace Escape_from_Duckov_Lilly_Mod
             {
                 // 항상 0으로 덮어쓰기
                 __result = config.PetCapcity;
+            }
+
+            [HarmonyPatch("GunShootSpeedMultiplier", MethodType.Getter)]
+            [HarmonyPostfix]
+            public static void GunShootSpeedMultiplier(ref float __result, CharacterMainControl __instance)
+            {
+                if (__instance.IsMainCharacter)
+                    // 원래 반환값(__result)을 두 배로 변경
+                    __result *= config.GunShootSpeedMultiplier;
             }
 
             [HarmonyPatch("CharacterRunSpeed", MethodType.Getter)]
@@ -290,6 +300,18 @@ namespace Escape_from_Duckov_Lilly_Mod
             {
                 // 원래 getter가 반환한 값(__result)에 1024를 더해줌
                 __result += config.PlayerStorageDefaultCapacity;
+            }
+        }
+
+        [HarmonyPatch(typeof(ItemSetting_Gun))]
+        public class ItemSetting_Gun_Patch
+        {
+            [HarmonyPatch("currentTriggerMode", MethodType.Getter)]
+            [HarmonyPrefix]
+            public static bool currentTriggerMode(ref ItemSetting_Gun.TriggerModes __result)
+            {
+                __result = ItemSetting_Gun.TriggerModes.auto;
+                return false;
             }
         }
 
