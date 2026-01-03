@@ -1,4 +1,5 @@
-﻿using Duckov.Buffs;
+﻿using Duckov.BlackMarkets;
+using Duckov.Buffs;
 using Duckov.ItemBuilders;
 using Duckov.Modding;
 using ECM2.Examples.SlopeSpeedModifier;
@@ -252,11 +253,25 @@ namespace Escape_from_Duckov_Lilly_Mod
 
         private static readonly HashSet<string> Debuff = new HashSet<string>
         {
+            "Buff_Nauseous", // 
+            "Buff_PoisonLow", // 
             "Buff_Burn", // 
             "Buff_Electric", // 
             "Buff_BleedS", // 
             "Buff_Pain", // 
         };
+
+        [HarmonyPatch(typeof(BlackMarket))]
+        public static class BlackMarket_Patch
+        {
+            [HarmonyPatch("RefreshChance", MethodType.Getter)]
+            [HarmonyPrefix]
+            public static bool RefreshChance(ref int __result, BlackMarket __instance)
+            {
+                __result = __instance.MaxRefreshChance;
+                return false; // 원래 메서드 실행 안함
+            }
+        }
 
         [HarmonyPatch(typeof(Buff))] // 실제 대상 클래스가 Setup을 가진 클래스명으로 교체 필요
         public static class Buff_Patch
